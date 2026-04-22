@@ -37,10 +37,8 @@ client_socket.sendto(encrypt("JOIN"), (server_ip, server_port))
 print("WELCOME USER 1")
 print("User 1 connected to server")
 
-# Slightly increased delay to ensure server registers client
-time.sleep(2)
+time.sleep(2)   # important for sync
 
-# Trigger sending
 client_socket.sendto(encrypt("SEND"), (server_ip, server_port))
 
 print("Waiting for messages...")
@@ -49,17 +47,6 @@ print("========================================\n")
 # -------- DISPLAY --------
 
 def display(t, s, m, status):
-    print("----------------------------------------")
-    
-    if status == "RECEIVED":
-        print("New Message")
-    elif status == "DUPLICATE":
-        print("Duplicate Message")
-    elif status == "OUT-OF-ORDER":
-        print("Out-of-Order Message")
-    elif status == "BUFFERED":
-        print("Buffered Message")
-    
     print("----------------------------------------")
     
     print(f"Type      : {t}")
@@ -74,35 +61,48 @@ def display(t, s, m, status):
 while True:
     try:
         data, _ = client_socket.recvfrom(1024)
+        print("[DEBUG] Packet received")   # 🔥 IMPORTANT DEBUG
     except:
         continue
 
+    # -------- DECRYPT --------
     try:
         message = decrypt(data)
-        t, s, m = message.split("|")
-        s = int(s)
-    except:
+        print("[DEBUG] Decrypted:", message)   # 🔥 DEBUG
+    except Exception as e:
+        print("[ERROR] Decryption failed:", e)
         continue
 
-    if s in received:
-        display(t, s, m, "DUPLICATE")
+    # -------- PARSE --------
+    try:
+        seq, msg = message.split("|")
+        seq = int(seq)
+        t = "NOTIFICATION"   # since server sends only seq|msg
+    except Exception as e:
+        print("[ERROR] Parse failed:", e)
+        continue
+
+    # -------- DUPLICATE --------
+    if seq in received:
+        display(t, seq, msg, "DUPLICATE")
 
     else:
-        if s == expected_seq:
-            display(t, s, m, "RECEIVED")
-            received.add(s)
+        if seq == expected_seq:
+            display(t, seq, msg, "RECEIVED")
+            received.add(seq)
             expected_seq += 1
 
             while expected_seq in buffer:
-                bt, bm = buffer.pop(expected_seq)
-                display(bt, expected_seq, bm, "BUFFERED")
+                bm = buffer.pop(expected_seq)
+                display(t, expected_seq, bm, "BUFFERED")
                 received.add(expected_seq)
                 expected_seq += 1
 
         else:
-            buffer[s] = (t, m)
-            display(t, s, m, "OUT-OF-ORDER")
+            buffer[seq] = msg
+            display(t, seq, msg, "OUT-OF-ORDER")
 
-    # ACK
-    ack = f"ACK|{s}"
+    # -------- ACK --------
+    ack = f"ACK|{seq}"
     client_socket.sendto(encrypt(ack), (server_ip, server_port))
+    print(f"[ACK SENT] {seq}\n")
