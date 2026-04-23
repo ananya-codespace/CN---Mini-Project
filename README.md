@@ -1,99 +1,94 @@
-***PROBLEM STATEMENT***
+## RELIABLE UDP NOTIFICATION SYSTEM
 
+## Overview
 
+This project implements a reliable notification system over UDP with added encryption. Since UDP does not guarantee delivery, ordering, or duplication control, these features are implemented manually.
 
-This project shows a reliable group notification system using UDP sockets.
+The system includes:
 
-UDP does not guarantee packets to be delivered correctly, so we are designing a protocol that "creates" reliability by using sequence numbers and ACKs. We will be transferring broadcast messages to multiple clients at the same time.
+* A server that sends notifications reliably to connected clients
+* A client that receives, orders, and acknowledges messages
 
+## Security
 
+* Uses AES-GCM encryption
+* This is to ensure messages are confidential
 
+## Reliability over UDP 
 
+The following is used 
 
+* Sequence numbers for tracking messages
+* Acknowledgment (ACK) mechanism
+* Retransmissions based on timeout
+* Handles packet loss, duplication, and out-of-order delivery
 
+## Client-side Handling
 
-***WHAT IS REQUIRED?***
+* Detects and labels messages as:
 
+  * RECEIVED
+  * DUPLICATE
+  * OUT-OF-ORDER
+  * BUFFERED
+* Maintains correct ordering using a buffer
 
 
-1\. Proper TCP/UDP Communication
+## Project Structure
 
-2\. Concurrency with multiple clients (2 in our case)
+```
+project/
+│── server.py
+│── client.py
+│── README.md
+```
 
-3\. Protocol Design (the format of our packet)
+## Workflow
 
-4\. Using SSL and TLS for security
+1. Client sends a JOIN request to the server
+2. Server registers the client
+3. Client sends a SEND request
+4. Server sends notifications with sequence numbers
+5. Client:
 
-5\. Reliability over UDP (ACKs and retransmission)
+   * Processes incoming messages
+   * Buffers out-of-order messages
+   * Sends acknowledgments
+   
+6. Server retries sending messages until all clients acknowledge
 
-6\. Performance evaluation
+## Important Notes
 
+* The server sends messages only if at least one client is connected
+* Packet loss is simulated using a probability factor in the server
 
+Example:
 
+```python
+LOSS_PROBABILITY = 0.3
+```
 
+## Message Format
 
-***SYSTEM ARCHITECTURE (what will the system, as a whole, look like?)***
+All messages follow the format:
 
+```
+TYPE|SEQUENCE|MESSAGE
+```
 
+## Reliability Mechanism
 
-There is one central server which will be listening for incoming UDP messages from clients. Clients will join the system and receive broadcast messages. The server looks for clients who are active and sends notifications to all of them.
+* The server waits for acknowledgments from all clients
+* If acknowledgments are not received within a timeout, the message is retransmitted
+* Retries stop after a maximum limit
 
+## Concepts Used
 
+* UDP Socket Programming
+* Reliable Data Transfer mechanisms
+* Acknowledgment and retransmission strategies
+* Encryption using AES-GCM
+* Buffering and sequencing
 
-
-
-***PROTOCOL DESIGN*** 
-
-
-
-***(a) How and what will our packets look like?***
-
-
-
-DATA: seq|message
-
-ACK:  ACK|seq
-
-
-
-***(b) Messages and their types***
-
-
-
-JOIN: Client has registered with the server
-
-SEND: Server can start broadcasting
-
-`seq: message`
-
-`ACK: seq`
-
-
-
-***(c) How an example simulation will look like (flow)***
-
-
-
-Client → Server: JOIN
-
-Client → Server: SEND
-
-
-
-Server → All Clients: 1|Hello clients!
-
-
-
-Client → Server: ACK|1
-
-
-
-
-
-***RELIABILITY MECHANISM (what makes our program reliable?)***
-
-
-
-Each message is assigned a unique sequence number, and server maintains a record of what ACKs have been received. After they receive a packet, clients send an ACK.
 
 
