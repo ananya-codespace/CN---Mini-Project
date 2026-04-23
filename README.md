@@ -61,11 +61,11 @@ project/
 ## Output Screenshots
 
 ### Server
-![Server output](screenshots/server.png)
+![Server output](screenshots/server.jpeg)
 
 ### Client
 
-![Client output](screenshots/client.png)
+![Client output](screenshots/client.jpeg)
 
 ## Important Notes
 
