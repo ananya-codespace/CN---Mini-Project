@@ -1,24 +1,42 @@
 import socket
 import time
 import random
+import os
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+
+
 
 server_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 server_socket.bind(("0.0.0.0", 5000))
 
 clients = set()
-last_seen = {}   # client → last active time
+last_seen = {}
 
 seq = 1
 ack_tracker = {}
 message_buffer = {}
 
 TIMEOUT = 3
-CLIENT_TIMEOUT = 10   # remove inactive clients
-LOSS_PROB = 0.2       # 20% packet loss simulation
+CLIENT_TIMEOUT = 10
+LOSS_PROB = 0.2
+
+
+
+key = b'0123456789abcdef'
+aesgcm = AESGCM(key)
+
+def encrypt(msg):
+    nonce = os.urandom(12)
+    return nonce + aesgcm.encrypt(nonce, msg.encode(), None)
+
+def decrypt(data):
+    nonce = data[:12]
+    return aesgcm.decrypt(nonce, data[12:], None).decode()
 
 print("[SERVER] Listening...")
 
-# ---------------- CLEANUP DEAD CLIENTS ----------------
+
+
 def remove_inactive_clients():
     current = time.time()
     for client in list(clients):
@@ -26,25 +44,34 @@ def remove_inactive_clients():
             clients.remove(client)
             print(f"[REMOVE] Inactive client {client}")
 
-# ---------------- SEND WITH LOSS SIMULATION ----------------
+
+
 def unreliable_send(msg, client):
     if random.random() > LOSS_PROB:
-        server_socket.sendto(msg.encode(), client)
+        server_socket.sendto(encrypt(msg), client)   
     else:
         print(f"[LOSS] Simulated loss to {client}")
 
+
+
 while True:
     data, addr = server_socket.recvfrom(1024)
-    message = data.decode()
 
-    last_seen[addr] = time.time()  # update activity
+    
+    try:
+        message = decrypt(data)
+    except:
+        print(f"[ERROR] Invalid packet from {addr}")
+        continue
 
-    # ---------------- JOIN ----------------
+    last_seen[addr] = time.time()
+
+   
     if message == "JOIN":
         clients.add(addr)
         print(f"[JOIN] {addr}")
 
-    # ---------------- SEND ----------------
+    
     elif message == "SEND":
         print(f"[SEND request from {addr}]")
 
@@ -52,7 +79,6 @@ while True:
         ack_tracker[seq] = set()
         message_buffer[seq] = msg
 
-        # send to all clients
         for client in clients:
             unreliable_send(msg, client)
 
@@ -61,13 +87,18 @@ while True:
         start_time = time.time()
         retransmissions = 0
 
-        # -------- WAIT FOR ACKs --------
+        
         while ack_tracker[seq] != clients:
             server_socket.settimeout(1)
 
             try:
                 data_ack, addr_ack = server_socket.recvfrom(1024)
-                ack_msg = data_ack.decode()
+
+                
+                try:
+                    ack_msg = decrypt(data_ack)
+                except:
+                    continue
 
                 if ack_msg.startswith("ACK"):
                     _, ack_seq = ack_msg.split("|")
@@ -81,7 +112,7 @@ while True:
             except socket.timeout:
                 pass
 
-            # -------- TIMEOUT --------
+            
             if time.time() - start_time > TIMEOUT:
                 print("[TIMEOUT] Retransmitting...")
 
@@ -92,7 +123,6 @@ while True:
 
                 start_time = time.time()
 
-            # remove dead clients dynamically
             remove_inactive_clients()
 
         print(f"[SUCCESS] Seq {seq} delivered")
@@ -101,7 +131,7 @@ while True:
         seq += 1
         server_socket.settimeout(None)
 
-    # ---------------- ACK ----------------
+    
     elif message.startswith("ACK"):
         _, ack_seq = message.split("|")
         ack_seq = int(ack_seq)
