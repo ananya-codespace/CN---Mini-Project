@@ -1,5 +1,11 @@
 ## RELIABLE UDP NOTIFICATION SYSTEM
 
+## Team Members
+
+- **Ananya Uppili** - PES1UG24CS060
+- **Ananya V**      - PES1UG24CS061
+- **Akanksha P**    - PES1UG25CS801
+
 ## Overview
 
 This project implements a reliable notification system over UDP with added encryption. Since UDP does not guarantee delivery, ordering, or duplication control, these features are implemented manually.
