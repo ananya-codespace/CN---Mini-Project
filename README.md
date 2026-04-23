@@ -41,6 +41,7 @@ project/
 │── server.py
 │── client.py
 │── README.md
+│── screenshots
 ```
 
 ## Workflow
@@ -56,6 +57,15 @@ project/
    * Sends acknowledgments
    
 6. Server retries sending messages until all clients acknowledge
+
+## Output Screenshots
+
+### Server
+![Server output](screenshots/server.png)
+
+### Client
+
+![Client output](screenshots/client.png)
 
 ## Important Notes
 
