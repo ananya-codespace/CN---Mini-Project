@@ -1,10 +1,10 @@
-## RELIABLE UDP NOTIFICATION SYSTEM
+## RELIABLE GROUP NOTIFICATION SYSTEM
 
 ## Team Members
 
 - **Ananya Uppili** - PES1UG24CS060
-- **Ananya V**      - PES1UG24CS061
-- **Akanksha P**    - PES1UG25CS801
+- **Ananya V** - PES1UG24CS061
+- **Akanksha P** - PES1UG25CS801
 
 ## Overview
 
